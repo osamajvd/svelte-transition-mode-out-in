@@ -63,7 +63,7 @@ export function to_class(value, hash, directives) {
 	}
 
 	if (directives) {
-		for (var key of Object.keys(directives)) {
+		for (var key in directives) {
 			if (directives[key]) {
 				classname = classname ? classname + ' ' + key : key;
 			} else if (classname.length) {
@@ -98,7 +98,7 @@ function append_styles(styles, important = false) {
 	var separator = important ? ' !important;' : ';';
 	var css = '';
 
-	for (var key of Object.keys(styles)) {
+	for (var key in styles) {
 		var value = styles[key];
 		if (value != null && value !== '') {
 			css += ' ' + key + ': ' + value + separator;
