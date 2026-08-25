@@ -283,7 +283,8 @@ export function each(node, flags, get_collection, get_key, render_fn, fallback_f
 			}
 		}
 
-		var keys = new Set();
+		/** @type {Set<any> | null} */
+		var keys = first_run ? null : new Set();
 		var batch = /** @type {Batch} */ (current_batch);
 		var defer = should_defer_append();
 
@@ -340,7 +341,9 @@ export function each(node, flags, get_collection, get_key, render_fn, fallback_f
 				items.set(key, item);
 			}
 
-			keys.add(key);
+			if (keys !== null) {
+				keys.add(key);
+			}
 		}
 
 		if (length === 0 && fallback_fn && !fallback) {
@@ -352,7 +355,8 @@ export function each(node, flags, get_collection, get_key, render_fn, fallback_f
 			}
 		}
 
-		if (length > keys.size) {
+		var keys_size = keys === null ? items.size : keys.size;
+		if (length > keys_size) {
 			if (DEV) {
 				validate_each_keys(array, get_key);
 			} else {
@@ -367,11 +371,12 @@ export function each(node, flags, get_collection, get_key, render_fn, fallback_f
 		}
 
 		if (!first_run) {
-			pending.set(batch, keys);
+			var non_null_keys = /** @type {Set<any>} */ (keys);
+			pending.set(batch, non_null_keys);
 
 			if (defer) {
 				for (const [key, item] of items) {
-					if (!keys.has(key)) {
+					if (!non_null_keys.has(key)) {
 						batch.skip_effect(item.e);
 					}
 				}
