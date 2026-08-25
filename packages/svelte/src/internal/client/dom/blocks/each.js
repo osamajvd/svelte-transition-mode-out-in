@@ -64,8 +64,6 @@ export function index(_, i) {
  * @param {null | Node} controlled_anchor
  */
 function pause_effects(state, to_destroy, controlled_anchor) {
-	/** @type {TransitionManager[]} */
-	var transitions = [];
 	var length = to_destroy.length;
 
 	/** @type {EachOutroGroup} */
@@ -107,8 +105,7 @@ function pause_effects(state, to_destroy, controlled_anchor) {
 		// Skip the fast path when another batch is still pending on this each block:
 		// that batch's keys still reference EachItems in `state.items`, which
 		// `destroy_effects` needs to preserve offscreen (see #18610).
-		var fast_path =
-			transitions.length === 0 && controlled_anchor !== null && state.pending.size === 0;
+		var fast_path = controlled_anchor !== null && state.pending.size === 0;
 
 		if (fast_path) {
 			var anchor = /** @type {Element} */ (controlled_anchor);
@@ -450,11 +447,11 @@ function reconcile(state, array, anchor, flags, get_key) {
 	/** @type {undefined | Set<Effect>} */
 	var to_animate;
 
-	/** @type {Effect[]} */
-	var matched = [];
+	/** @type {Effect[] | null} */
+	var matched = null;
 
-	/** @type {Effect[]} */
-	var stashed = [];
+	/** @type {Effect[] | null} */
+	var stashed = null;
 
 	/** @type {V} */
 	var value;
@@ -524,8 +521,8 @@ function reconcile(state, array, anchor, flags, get_key) {
 				move(effect, next, anchor);
 				prev = effect;
 
-				matched = [];
-				stashed = [];
+				matched = null;
+				stashed = null;
 
 				current = skip_to_branch(prev.next);
 				continue;
@@ -534,7 +531,7 @@ function reconcile(state, array, anchor, flags, get_key) {
 
 		if (effect !== current) {
 			if (seen !== undefined && seen.has(effect)) {
-				if (matched.length < stashed.length) {
+				if (matched !== null && stashed !== null && matched.length < stashed.length) {
 					// more efficient to move later items to the front
 					var start = stashed[0];
 					var j;
@@ -560,8 +557,8 @@ function reconcile(state, array, anchor, flags, get_key) {
 					prev = b;
 					i -= 1;
 
-					matched = [];
-					stashed = [];
+					matched = null;
+					stashed = null;
 				} else {
 					// more efficient to move earlier items to the back
 					seen.delete(effect);
@@ -591,7 +588,7 @@ function reconcile(state, array, anchor, flags, get_key) {
 			}
 		}
 
-		if ((effect.f & EFFECT_OFFSCREEN) === 0) {
+		if (stashed !== null && stashed.length !== 0 && (effect.f & EFFECT_OFFSCREEN) === 0) {
 			matched.push(effect);
 		}
 
@@ -612,7 +609,7 @@ function reconcile(state, array, anchor, flags, get_key) {
 		}
 	}
 
-	if (current !== null || seen !== undefined) {
+	if (current !== null || (seen !== undefined && seen.size > 0)) {
 		/** @type {Effect[]} */
 		var to_destroy = [];
 
