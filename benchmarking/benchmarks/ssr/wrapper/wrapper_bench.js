@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { render } from 'svelte/server';
 import { fastest_test } from '../../../utils.js';
 import { compile } from 'svelte/compiler';
@@ -13,7 +14,7 @@ async function compile_svelte() {
 
 	write(`${dir}/output/App.js`, output.js.code);
 
-	const module = await import(`${dir}/output/App.js`);
+	const module = await import(pathToFileURL(`${dir}/output/App.js`).href);
 
 	return module.default;
 }

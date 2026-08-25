@@ -1,3 +1,5 @@
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { reactivity_benchmarks } from '../benchmarks/reactivity/index.js';

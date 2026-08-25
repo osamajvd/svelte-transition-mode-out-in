@@ -13,7 +13,7 @@ import {
 	sbench_create_4to1,
 	sbench_create_signals
 } from './sbench.js';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { create_test } from './util.js';
 
 // This benchmark has been adapted from the js-reactivity-benchmark (https://github.com/milomg/js-reactivity-benchmark)
@@ -39,7 +39,7 @@ for (const file of fs.readdirSync(`${dirname}/tests`)) {
 
 	const name = file.replace('.bench.js', '');
 
-	const module = await import(`${dirname}/tests/${file}`);
+	const module = await import(pathToFileURL(`${dirname}/tests/${file}`).href);
 	const { owned, unowned } = create_test(name, module.default);
 
 	reactivity_benchmarks.push(owned, unowned);
