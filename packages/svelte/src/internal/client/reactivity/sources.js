@@ -115,9 +115,21 @@ export function state(v, stack) {
  */
 /*#__NO_SIDE_EFFECTS__*/
 export function mutable_source(initial_value, immutable = false, trackable = true) {
-	const s = source(initial_value);
-	if (!immutable) {
-		s.equals = safe_equals;
+	/** @type {Value} */
+	var s = {
+		f: 0,
+		v: initial_value,
+		reactions: null,
+		equals: immutable ? equals : safe_equals,
+		rv: 0,
+		wv: 0
+	};
+
+	if (DEV && tracing_mode_flag) {
+		s.created = get_error('created at');
+		s.updated = null;
+		s.set_during_effect = false;
+		s.trace = null;
 	}
 
 	// bind the signal to the component context, in case we need to
@@ -152,11 +164,9 @@ export function mutate(source, value) {
 export function set(source, value, should_proxy = false) {
 	if (
 		active_reaction !== null &&
-		// since we are untracking the function inside `$inspect.with` we need to add this check
-		// to ensure we error if state is set inside an inspect effect
+		(active_reaction.f & (DERIVED | BLOCK_EFFECT | ASYNC | EAGER_EFFECT)) !== 0 &&
 		(!untracking || (active_reaction.f & EAGER_EFFECT) !== 0) &&
 		is_runes() &&
-		(active_reaction.f & (DERIVED | BLOCK_EFFECT | ASYNC | EAGER_EFFECT)) !== 0 &&
 		(current_sources === null || !current_sources.has(source))
 	) {
 		e.state_unsafe_mutation();
@@ -247,10 +257,10 @@ export function internal_set(source, value, updated_during_traversal = null) {
 		// properly for itself, we need to ensure the current effect actually gets
 		// scheduled. i.e: `$effect(() => x++)`
 		if (
-			is_runes() &&
 			active_effect !== null &&
 			(active_effect.f & CLEAN) !== 0 &&
-			(active_effect.f & (BRANCH_EFFECT | ROOT_EFFECT)) === 0
+			(active_effect.f & (BRANCH_EFFECT | ROOT_EFFECT)) === 0 &&
+			is_runes()
 		) {
 			if (untracked_writes === null) {
 				set_untracked_writes([source]);
@@ -344,7 +354,7 @@ function mark_reactions(signal, status, updated_during_traversal) {
 	var reactions = signal.reactions;
 	if (reactions === null) return;
 
-	var runes = is_runes();
+	var is_legacy = legacy_mode_flag && !is_runes();
 	var length = reactions.length;
 
 	for (var i = 0; i < length; i++) {
@@ -352,7 +362,7 @@ function mark_reactions(signal, status, updated_during_traversal) {
 		var flags = reaction.f;
 
 		// In legacy mode, skip the current effect to prevent infinite loops
-		if (!runes && reaction === active_effect) continue;
+		if (is_legacy && reaction === active_effect) continue;
 
 		var not_dirty = (flags & DIRTY) === 0;
 
